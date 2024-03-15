@@ -23,7 +23,7 @@ jobs:
           architecture: x64
 
       - name: Compile with maven
-        run: ./mvnw package
+        run: chmod +x mvnw && ./mvnw package
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
