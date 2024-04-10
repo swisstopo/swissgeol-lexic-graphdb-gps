@@ -13,6 +13,7 @@ import org.jboss.resteasy.reactive.RestPath;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 
 /**
  * Will publish the RDF file to graphdb repository
@@ -23,8 +24,8 @@ public class PublishEndpoint {
     /** The logged */
     private static final Logger log = Logger.getLogger(PublishEndpoint.class);
 
-    @ConfigProperty(name = "swissgeol.graphdb-gps.token", defaultValue = "")
-    private String authorization_token;
+    @ConfigProperty(name = "swissgeol.graphdb-gps.token")
+    private Optional<String> authorization_token;
 
     /** The rdf4j service */
     @Inject
@@ -46,11 +47,12 @@ public class PublishEndpoint {
             InputStream content
     ) {
         
-        if (!StringUtils.isBlank(authorization_token)) {
+        if (authorization_token.isPresent() && !StringUtils.isBlank(authorization_token.get())) {
+            String auth_token = authorization_token.get();
             if (
                     authorization_header.length() <= 7
                             || !authorization_header.startsWith("Bearer ")
-                            || !authorization_token.equals(authorization_header.substring(7))
+                            || !auth_token.equals(authorization_header.substring(7))
             ) {
                 throw new UnauthorizedException("Invalid authorization token");
             }
