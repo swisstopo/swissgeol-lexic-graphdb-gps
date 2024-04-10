@@ -1,10 +1,13 @@
 package ch.swissgeol.gbgps.controller;
 
 import ch.swissgeol.gbgps.service.Rdf4JService;
+import io.quarkus.security.UnauthorizedException;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.RestPath;
 
@@ -19,6 +22,9 @@ public class PublishEndpoint {
 
     /** The logged */
     private static final Logger log = Logger.getLogger(PublishEndpoint.class);
+
+    @ConfigProperty(name = "swissgeol.graphdb-gps.token", defaultValue = "")
+    private String authorization_token;
 
     /** The rdf4j service */
     @Inject
@@ -36,8 +42,20 @@ public class PublishEndpoint {
     public String publish(
             @RestPath String repository,
             @QueryParam("context") String context_url,
+            @HeaderParam("Authorization") String authorization_header,
             InputStream content
     ) {
+        
+        if (!StringUtils.isBlank(authorization_token)) {
+            if (
+                    authorization_header.length() <= 7
+                            || !authorization_header.startsWith("Bearer ")
+                            || !authorization_token.equals(authorization_header.substring(7))
+            ) {
+                throw new UnauthorizedException("Invalid authorization token");
+            }
+        }
+        
         String tid = "["+System.currentTimeMillis()+"] ";
 
         log.info(String.format(
