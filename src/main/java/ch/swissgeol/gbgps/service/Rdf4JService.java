@@ -5,6 +5,8 @@ import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.query.QueryLanguage;
+import org.eclipse.rdf4j.query.Update;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.manager.RemoteRepositoryManager;
@@ -82,22 +84,33 @@ public class Rdf4JService {
         log.info(tid+"Start publishing rdf to repository "+repository_name+" for graph url: "+context_url);
 
         Repository repository = repositoryManager.getRepository(repository_name);
-        RepositoryConnection connection = repository.getConnection();
 
-        ValueFactory vf = connection.getValueFactory();
+        try (RepositoryConnection connection = repository.getConnection()) {
 
-        log.info(tid+"Upload rdf to repository "+repository_name+" for graph url: "+context_url);
+            // Clear existing data in the graph
+            String clearGraphQuery = "CLEAR GRAPH <" + context_url + ">";
+            Update update = connection.prepareUpdate(QueryLanguage.SPARQL, clearGraphQuery);
+            update.execute();
 
-        connection.add(
-                content,
-                context_url,
-                RDFFormat.RDFXML,
-                vf.createIRI(context_url));
+            log.info(tid + "Graph data cleared for graph url: " + context_url);
 
-        log.info(tid+"Closing connection after publish to repository "+repository_name+" for graph url: "+context_url);
+            ValueFactory vf = connection.getValueFactory();
 
-        connection.close();
-        repository.shutDown();
+            log.info(tid + "Upload rdf to repository " + repository_name + " for graph url: " + context_url);
+
+            connection.add(
+                    content,
+                    context_url,
+                    RDFFormat.RDFXML,
+                    vf.createIRI(context_url));
+
+            log.info(tid + "Closing connection after publish to repository " + repository_name + " for graph url: " + context_url);
+
+        } finally {
+
+            repository.shutDown();
+
+        }
 
         log.info(tid+"Connection closed after publish to repository "+repository_name+" for graph url: "+context_url);
 
